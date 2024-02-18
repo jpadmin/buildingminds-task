@@ -1,0 +1,22 @@
+kafka:
+  image:
+    tag: 3.4
+  controller:
+    replicaCount: 3
+    controllerOnly: false
+  kraft:
+    enabled: true
+  zookeeper:
+    enabled: false
+  sasl:
+    enabledMechanisms: PLAIN
+    client:
+      users:
+        - bmUser
+      passwords: "buildingMinds2024"
+  provisioning:
+    enabled: true
+    topics:
+      - name: posts
+        partitions: 3
+        replicationFactor: 3
