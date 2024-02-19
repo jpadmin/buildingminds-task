@@ -30,10 +30,41 @@ kubectl create ns kafka
 helm install buildingminds-kafka ./ -n kafka
 ```
 
-
 2. Containerization & Deployment:
 - The python applications have an initial docker container, make some improvements to it using best practices for containerization.
 - Deploy the applications to your Kubernetes cluster.
+
+$${\color{lightgreen}Solution : 2. Containerization And Deployment}$$
+- Changes for the Dockerfiles has been added to producer and consumer application files with best practices steps by including the frequently changing part of the application towards end of the dockerfile, there by bring meaningful layers in the docker images and increased reusability of layers across the two application. Also the application layer has been taken away from the root or privileged access part of the container to an application user. This however can also be controlled by setting the required capabilities in the kubernetes layer, however this approach is taken to restrict this to docker/container layer.
+- Also the necessary templates has been added to the `helm-app/templates` folder to add this layer to our kubernetes application.
+- How to Deploy the solution with consumer and producer application.
+```
+#Build the docker image with new changes we made
+cd buildingminds-task/producer
+docker build -t johnpaulkj/kafka-producer:latest .
+docker push johnpaulkj/kafka-producer:latest
+
+cd buildingminds-task/consumer
+docker build -t johnpaulkj/kafka-consumer:latest .
+docker push johnpaulkj/kafka-consumer:latest
+
+#Ensure producer and consumer values are in helm values file and templates are there in templates folder
+helm upgrade buildingminds-kafka ./ -n kafka
+
+#Verify the producer logs
+kubectl logs -n kafka bm-app-producer-6kdnq          
+Defaulted container "bm-app-producer" out of: bm-app-producer, init-container (init)
+message 0 sent to topic posts
+message 1 sent to topic posts
+message 2 sent to topic posts
+message 3 sent to topic posts
+message 4 sent to topic posts
+
+# Though the messages are not recieved in consumer
+kubectl logs -n kafka bm-app-consumer-9b547b5b9-p8v8n
+Defaulted container "bm-app-consumer" out of: bm-app-consumer, init-container (init)
+Listening for messages on topic 'posts'...
+```
 
 3. IaC:
 - Set your infrastructure as code using best practices. Think of how would you upgrade the kafka version, add more brokers, manage topics, etc.
