@@ -16,6 +16,21 @@ The system should be able to handle a large volume of data and ensure high avail
 - Define a topic called `posts` and propose a partition and replication strategy. Explain your reasoning.
 - Your setup should also help the backend developers to test their python application locally.
 
+$${\color{lightgreen}Solution : 1. Kafka Cluster}$$
+- Researched about this and used the Bitnami's kafka helm chart to deploy the kafka cluster with 3 nodes, of which all act in the `controller+broker` roles in the Raft algorithm(without zookeeper). Refer to the kafka specific values in `helm-app/values.yaml`.
+- Raft Algorithm is selected as it best suited to bring up high availability and fault-tolerance by possibly rewamp the cluster and recover the metadata by switching the master through election in case of master failure.
+- In perspective of scalability, this template is so friendly to include more nodes, can be `controller+broker`, `controller` or `broker` role, provided if you move to `controller`/ `broker`, you need to migrate all existing `controller+broker` nodes to either `controller`/ `broker` and viceversa.
+- Additionally pod disruption budget is maintained with `maxUnavailable` set to 1 to make sure consistency across kubernetes node replacements and other housekeeping activities.
+- How to Deploy the solution.
+```
+git clone https://github.com/jpadmin/buildingminds-task.git
+cd buildingminds-task/helm-app
+helm dependencies build
+kubectl create ns kafka
+helm install buildingminds-kafka ./ -n kafka
+```
+
+
 2. Containerization & Deployment:
 - The python applications have an initial docker container, make some improvements to it using best practices for containerization.
 - Deploy the applications to your Kubernetes cluster.
@@ -42,3 +57,24 @@ Notes:
 - Code
 - Documentation
 - Showcase your work in a live demo
+
+$${\color{lightgreen}Verification : Message Passing}$$
+
+At Producer
+```
+I have no name!@busybox2:/$ kafka-console-producer.sh  --bootstrap-server buildingminds-kafka.kafka.svc.cluster.local:9092 --topic posts
+>hi
+>welcome to building minds test
+>bye
+>I have no name!@busybox2:/$
+```
+
+At Consumer
+```
+I have no name!@busybox2:/$ kafka-console-consumer.sh --bootstrap-server buildingminds-kafka.kafka.svc.cluster.local:9092 --topic posts --from-beginning
+hi
+welcome to building minds test
+bye
+^CProcessed a total of 3 messages
+I have no name!@busybox2:/$
+```
