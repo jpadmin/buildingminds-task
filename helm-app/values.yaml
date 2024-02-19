@@ -1,11 +1,19 @@
 kafka:
   image:
     tag: 3.4
+  listeners:
+    client:
+      protocol: PLAINTEXT
   controller:
     replicaCount: 3
     controllerOnly: false
     pdb:
       create: true
+      maxUnavailable: 1
+  broker:
+    replicaCount: 0
+    pdb:
+      create: false
       maxUnavailable: 1
   kraft:
     enabled: true
@@ -13,13 +21,21 @@ kafka:
     enabled: false
   sasl:
     enabledMechanisms: PLAIN
-    client:
-      users:
-        - bmUser
-      passwords: "buildingMinds2024"
   provisioning:
     enabled: true
     topics:
       - name: posts
         partitions: 3
         replicationFactor: 3
+
+consumer:
+  image:
+    repository: johnpaulkj/kafka-consumer
+    pullPolicy: Always
+    tag: "latest"
+
+producer:
+  image:
+    repository: johnpaulkj/kafka-producer
+    pullPolicy: Always
+    tag: "latest"

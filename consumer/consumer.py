@@ -8,7 +8,7 @@ kafka_topic = os.environ.get("KAFKA_TOPIC", "posts")
 
 consumer = KafkaConsumer(
     kafka_topic,
-    bootstrap_servers=[kafka_broker],
+    bootstrap_servers=kafka_broker.split(','),
     auto_offset_reset="earliest",
     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
 )

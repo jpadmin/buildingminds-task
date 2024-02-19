@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "bm-app.name" . }}-producer
+  labels:
+    {{- include "bm-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ include "bm-app.name" . }}-producer
+    app.kubernetes.io/part-of: kafka-client
+spec:
+  backoffLimit: 8
+  template:
+    metadata:
+      labels:
+        {{- include "bm-app.labels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ include "bm-app.name" . }}-producer
+        app.kubernetes.io/part-of: kafka-client
+    spec:
+      initContainers:
+        - name: init-container
+          image: registry.access.redhat.com/ubi8/ubi:latest
+          command: ['sh', '-c', 'until getent hosts $KAFKA_BROKER_URL; do echo waiting for $KAFKA_BROKER_URL; sleep 2; done;']
+          env:
+            - name: KAFKA_BROKER_URL
+              value: "buildingminds-kafka"
+      containers:
+        - name: {{ include "bm-app.name" . }}-producer
+          image: "{{ .Values.producer.image.repository }}:{{ .Values.producer.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.producer.image.pullPolicy }}
+          env:
+            - name: KAFKA_BROKER_URL
+              value: "buildingminds-kafka:9092"
+            - name: KAFKA_TOPIC
+              value: "posts"
+      restartPolicy: OnFailure
