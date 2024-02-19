@@ -21,6 +21,7 @@ $${\color{lightgreen}Solution : 1. Kafka Cluster}$$
 - Raft Algorithm is selected as it best suited to bring up high availability and fault-tolerance by possibly rewamp the cluster and recover the metadata by switching the master through election in case of master failure.
 - In perspective of scalability, this template is so friendly to include more nodes, can be `controller+broker`, `controller` or `broker` role, provided if you move to `controller`/ `broker`, you need to migrate all existing `controller+broker` nodes to either `controller`/ `broker` and viceversa.
 - Additionally pod disruption budget is maintained with `maxUnavailable` set to 1 to make sure consistency across kubernetes node replacements and other housekeeping activities.
+- Topic provisioning is done using kafka provisioner component, we create the `posts` topic with partition set to 3 and replication factor 3 to ensure better distribution of the data along all the broker nodes in the cluster.
 - How to Deploy the solution.
 ```
 git clone https://github.com/jpadmin/buildingminds-task.git
@@ -69,8 +70,43 @@ Listening for messages on topic 'posts'...
 3. IaC:
 - Set your infrastructure as code using best practices. Think of how would you upgrade the kafka version, add more brokers, manage topics, etc.
 
+$${\color{lightgreen}Solution : 3. IaC}$$
+- For this I have created a custom helm values file, which will upgrade our existing cluster to 3.5 and also create another topic with name update. See the helm infrastructure values file `helm-app/upgrade.yaml`.
+- How to deploy our solution
+```
+cd buildingminds-task/helm-app
+helm upgrade buildingminds-kafka ./ -n kafka -f upgrade.yaml
+```
+- Wait for the rollout is complete, now we can verify the changes.
+```
+# Verify the kafka version from the broker
+kubectl exec -it buildingminds-kafka-controller-0 bash -n kafka
+kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
+Defaulted container "kafka" out of: kafka, kafka-init (init) 
+I have no name!@buildingminds-kafka-controller-0:/$ kafka-topics.sh --version
+3.5.2
+I have no name!@buildingminds-kafka-controller-0:/$
+
+# We can also list the topics to confirm we have a topic named 'update'
+I have no name!@busybox2:/$ kafka-topics.sh --bootstrap-server buildingminds-kafka.kafka.svc.cluster.local:9092 --list
+__consumer_offsets
+posts
+update
+I have no name!@busybox2:/$
+```
+
 4. Observability (Optional):
 - Set up (or explain how to set) monitoring and alerting for your Kafka cluster.
+
+$${\color{lightgreen}Solution : 4. Observability}$$
+- For enabling Observability, we can make use of the kafka exporter that comes by default with chart, to enable this we can run:
+```
+cd buildingminds-task/helm-app
+helm upgrade buildingminds-kafka ./ -n kafka -f upgrade.yaml --set 'kafka.metrics.kafka.enabled=true'
+```
+- After adding the exporter pod along with the cluster with previous, we will get buildingminds-kafka-metrics service in kubernetes with the metrics url in buildingminds-kafka-metrics.kafka.svc.cluster.local:9308/metrics
+
+- From this URL, we can add a scrapping job in prometheus with this metrics url and after obtaining kafka metrics in prometheus and necessary alerts can be created by setting up the PromQL thresholds and create alerts to our endpoint devices like Slack / OpsGenie / PagerDuty with the help of alertmanager tool packed with prometheus.
 
 Notes:
 - We recommend you to use minikube, but you can also use kind, aks, or any other provider of your choice.
